@@ -31,6 +31,7 @@ func createHub() *Hub {
 
 func (h *Hub) run() {
 	ticker := time.NewTicker(sendWholeDataLoop)
+	readyToSend := false
 	playerId := 0
 	defer func() {
 		ticker.Stop()
@@ -51,17 +52,20 @@ func (h *Hub) run() {
 			}
 		case playerLoc := <-h.broadcast:
 			h.allData[playerLoc.Id] = Loc{playerLoc.Stamp, playerLoc.X, playerLoc.Y}
-
+			readyToSend = true
 			//add player data to allData
 		case <-ticker.C:
-			for player := range h.Players {
-				//send to player channel
-				select {
-				case player.Send <- h.allData:
-				default:
-					close(player.Send)
-					delete(h.allData, h.Players[player])
-					delete(h.Players, player)
+			if readyToSend == true {
+				readyToSend = false
+				for player := range h.Players {
+					//send to player channel
+					select {
+					case player.Send <- h.allData:
+					default:
+						close(player.Send)
+						delete(h.allData, h.Players[player])
+						delete(h.Players, player)
+					}
 				}
 			}
 		}

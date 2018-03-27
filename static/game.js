@@ -5,7 +5,9 @@ var movement = {
     Right: false 
 };
 
+var myPoints = new Array();
 var sock = null;
+var myPrePoint = [0,0];
 var wsuri = "ws://127.0.0.1:1234/ws";
 var playerName = "";
 var Enemy = null;
@@ -33,11 +35,15 @@ function drawRect(x,y){
 	var canvas = document.getElementById('game');
     var ctx = canvas.getContext('2d');
     ctx.fillStyle = "rgb(200,0,0)";
-    ctx.fillRect (x, y, 45, 40);
+    ctx.fillRect (x, y, 10, 10);
 }
 
 function init(){
 	window.requestAnimationFrame(loop);
+    var canvas = document.getElementById('game');
+	var ctx = canvas.getContext('2d');
+	ctx.clearRect(0, 0, 800, 600); // clear canvas
+	ctx.save();
 }
 
 function loop(){
@@ -45,7 +51,14 @@ function loop(){
 	var ctx = canvas.getContext('2d');
 	ctx.clearRect(0, 0, 800, 600); // clear canvas
 	ctx.save();
-	drawRect(playerXY.X,playerXY.Y);
+    var p = [0,0];
+    if (point.length > 1) {
+        p = point.pop();
+    }
+    else if(point.length == 1){
+        p = point[0];
+    }
+    drawRect(p[0],p[1]);
     if (Enemy != null){
         for( id in Enemy){
             if (id != Id){
@@ -54,6 +67,7 @@ function loop(){
         }
     }
 	ctx.restore();
+ 
 	window.requestAnimationFrame(loop);
 }
 
@@ -74,7 +88,6 @@ document.addEventListener('keydown', function(e){
     }
         message = {Type:'M',Data:movement};
         sock.send(JSON.stringify(message));
-        console.log(message);
 });
 
 
@@ -105,11 +118,17 @@ window.onload = function() {
 		console.log("connection closed (" + e.code + ")");
 	}
 	sock.onmessage = function(e) {
-        data = JSON.parse(e.data)
+        data = JSON.parse(e.data);
+        console.log(data);
         if (data.Type == "COR") {
             if (Id != null){
                 playerXY = data.Data[Id];
                 Enemy = data.Data;
+                interpolation(myPrePoint,[playerXY.X,playerXY.Y], 5, myPoints)
+                myPrePoint = [playerXY.X,playerXY.Y]
+            }
+            else {
+                console.log("No ID")
             }
         }
         else if (data.Type == "ID"){
@@ -119,8 +138,15 @@ window.onload = function() {
     init();
 };
 
+
 function send() {
 	var msg = document.getElementById('message').value;
 	sock.send(msg);
 };
 
+function interpolation(now, newPoint, interval, points) {
+    distance = [newPoint[0]-now[0],newPoint[1]-now[1]];
+    for(i=1;i<=interval;i++){
+        points.unshift([now[0] + i* distance[0]/interval, now[1] + i * distance[1]/interval]);
+    }
+}
