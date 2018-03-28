@@ -1,4 +1,5 @@
 var movement = {
+    CommandNum: 0,
     Up: false,
     Down: false,
     Left: false,
@@ -72,22 +73,30 @@ function loop(){
 }
 
 document.addEventListener('keydown', function(e){
+    var ifsend = false;
     switch (e.keyCode) {
     case 65: //A
         movement.Left = true;
+        ifsend = true;
         break;
     case 87: //W
         movement.Up = true;
+        ifsend = true;
         break;
     case 68: //D
         movement.Right = true;
+        ifsend = true;
         break;
     case 83: //S
         movement.Down = true;
+        ifsend = true;
         break;
     }
+    if (ifsend) {
+        movement.CommandNum += 1;
         message = {Type:'M',Data:movement};
         sock.send(JSON.stringify(message));
+    }
 });
 
 
@@ -144,9 +153,26 @@ function send() {
 	sock.send(msg);
 };
 
-function interpolation(now, newPoint, interval, points) {
-    distance = [newPoint[0]-now[0],newPoint[1]-now[1]];
+function interpolation(pre, next, interval, points) {
+    distance = [next[0]-pre[0],next[1]-pre[1]];
     for(i=1;i<=interval;i++){
-        points.unshift([now[0] + i* distance[0]/interval, now[1] + i * distance[1]/interval]);
+        points.unshift([pre[0] + i* distance[0]/interval, pre[1] + i * distance[1]/interval]);
+    }
+}
+
+playerManager = function(ctx){
+    this.stamp = 0;
+    this.commandNum = 0;
+    this.playerInfo = {};
+    this.ctx = ctx;
+    this.data = [];
+    this.input = function(data){
+    
+    }
+    this.interpolation = function(){
+    
+    }
+    this.renderPlayer = function(){
+    
     }
 }

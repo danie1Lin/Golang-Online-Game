@@ -49,6 +49,7 @@ func (p *Player) Recieve() {
 			if command.Right {
 				playerXY.X += 5
 			}
+			playerXY.CommandNum = command.CommandNum
 			playerLoc := PlayerLoc{
 				Id:  p.hub.Players[p],
 				Loc: playerXY,
@@ -72,8 +73,9 @@ func (p *Player) Trans() {
 }
 
 type Loc struct {
-	Stamp string
-	X, Y  int32
+	Stamp      int64
+	CommandNum int64
+	X, Y       int32
 }
 
 type PlayerLoc struct {
@@ -81,7 +83,7 @@ type PlayerLoc struct {
 	Loc
 }
 type Input struct {
-	Stamp                 string
+	CommandNum            int64
 	Up, Down, Left, Right bool
 }
 

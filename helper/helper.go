@@ -34,7 +34,16 @@ func setfield(k string, v interface{}, s interface{}) error {
 	structFieldType := structFieldValue.Type()
 	val := reflect.ValueOf(v)
 	if structFieldType != val.Type() {
-		return fmt.Errorf("Didn't match type %v in struct with %v in map", structFieldType, val.Type())
+
+		if structFieldValue.Kind() == reflect.Int64 {
+			if reflect.ValueOf(v).Kind() == reflect.Float64 {
+				x := v.(float64)
+				val = reflect.ValueOf(int64(x))
+				fmt.Println(val)
+			}
+		} else {
+			return fmt.Errorf("Didn't match type %v in struct with %v in map", structFieldType, val.Type())
+		}
 	}
 	structFieldValue.Set(val)
 	return nil
