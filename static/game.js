@@ -6,53 +6,36 @@ var movement = {
     Right: false 
 };
 
-var myPoints = new Array();
-var sock = null;
-var myPrePoint = [0,0];
-var wsuri = "ws://127.0.0.1:1234/ws";
-var playerName = "";
-var Enemy = null;
-var playerXY = {
-    stamp:'',
-    X:0,
-	Y:0
-};
-
-var Id = null;
-function draw(){
-	var canvas = document.getElementById('game');
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = "rgb(200,0,0)";
-    ctx.fillRect (10, 10, 55, 50);
-    ctx.fillStyle = "rgba(0, 0, 200, 0.5)";
-    ctx.fillRect (30, 30, 55, 50);
-    ctx.beginPath();
-    ctx.moveTo(75,50);
-    ctx.lineTo(100,75);
-    ctx.lineTo(100,25);
-    ctx.fill();
-}
-function drawRect(x,y){
-	var canvas = document.getElementById('game');
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = "rgb(200,0,0)";
-    ctx.fillRect (x, y, 10, 10);
-}
-
-function init(){
-	window.requestAnimationFrame(loop);
-    var canvas = document.getElementById('game');
-	var ctx = canvas.getContext('2d');
-	ctx.clearRect(0, 0, 800, 600); // clear canvas
-	ctx.save();
-}
-
-function loop(){
-    var canvas = document.getElementById('game');
-	var ctx = canvas.getContext('2d');
-	ctx.clearRect(0, 0, 800, 600); // clear canvas
-	ctx.save();
-    var p = [0,0];
+function motionManager(ctx,ID){
+    this.stamp = 0;
+    this.commandNum = 0;
+    this.playerInfo = {};
+    this.ctx = ctx;
+    this.data = [];
+    this.ID = ID;
+    console.log('Login! ID:',ID)
+    this.input = function(data){
+     if (data.Type == "COR") {
+            if (Id != null){
+                playerXY = data.Data[Id];
+                Enemy = data.Data;
+                interpolation(myPrePoint,[playerXY.X,playerXY.Y], 5, myPoints)
+                myPrePoint = [playerXY.X,playerXY.Y]
+            }
+            else {
+                console.log("No ID")
+            }
+        }
+        else if (data.Type == "ID"){
+            Id = data.Data;
+            player = new motionManager(ctx,Id)
+        }
+    }
+    this.interpolation = function(){
+   interpolation(); 
+    }
+    this.renderPlayer = function(){
+     var p = [0,0];
     if (point.length > 1) {
         p = point.pop();
     }
@@ -66,7 +49,56 @@ function loop(){
                 drawRect(Enemy[id].X,Enemy[id].Y)
             }
         }
+    }   
     }
+}
+
+var player = null;
+var myPoints = new Array();
+var sock = null;
+var myPrePoint = [0,0];
+var wsuri = "ws://127.0.0.1:1234/ws";
+var playerName = "";
+var Enemy = null;
+var playerXY = {
+    stamp:'',
+    X:0,
+	Y:0
+};
+
+function draw(){
+	var canvas = document.getElementById('game');
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = "rgb(200,0,0)";
+    ctx.fillRect (10, 10, 55, 50);
+    ctx.fillStyle = "rgba(0, 0, 200, 0.5)";
+    ctx.fillRect (30, 30, 55, 50);
+    ctx.beginPath();
+    ctx.moveTo(75,50);
+    ctx.lineTo(100,75);
+    ctx.lineTo(100,25);
+    ctx.fill();
+}
+function drawRect(x,y,color="rgb(200,0,0)",name){
+	var canvas = document.getElementById('game');
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.fillRect (x-5, y-5, 10, 10);
+    ctx.fillText(name,x,y);
+}
+
+function init(){
+	window.requestAnimationFrame(loop);
+    var canvas = document.getElementById('game');
+	var ctx = canvas.getContext('2d');
+}
+
+function loop(){
+    var canvas = document.getElementById('game');
+	var ctx = canvas.getContext('2d');
+	ctx.clearRect(0, 0, 800, 600); // clear canvas
+	ctx.save();
+
 	ctx.restore();
  
 	window.requestAnimationFrame(loop);
@@ -118,6 +150,8 @@ document.addEventListener('keyup', function(e){
 });
 
 window.onload = function() {
+    var canvas = document.getElementById('game');
+	var ctx = canvas.getContext('2d');
 	console.log("onload");
 	sock = new WebSocket(wsuri);
 	sock.onopen = function() {
@@ -129,21 +163,8 @@ window.onload = function() {
 	sock.onmessage = function(e) {
         data = JSON.parse(e.data);
         console.log(data);
-        if (data.Type == "COR") {
-            if (Id != null){
-                playerXY = data.Data[Id];
-                Enemy = data.Data;
-                interpolation(myPrePoint,[playerXY.X,playerXY.Y], 5, myPoints)
-                myPrePoint = [playerXY.X,playerXY.Y]
-            }
-            else {
-                console.log("No ID")
-            }
-        }
-        else if (data.Type == "ID"){
-            Id = data.Data;
-        }
-	}
+	    player.input(data);
+    }
     init();
 };
 
@@ -160,19 +181,4 @@ function interpolation(pre, next, interval, points) {
     }
 }
 
-playerManager = function(ctx){
-    this.stamp = 0;
-    this.commandNum = 0;
-    this.playerInfo = {};
-    this.ctx = ctx;
-    this.data = [];
-    this.input = function(data){
-    
-    }
-    this.interpolation = function(){
-    
-    }
-    this.renderPlayer = function(){
-    
-    }
-}
+
