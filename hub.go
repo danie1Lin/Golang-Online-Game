@@ -15,6 +15,7 @@ type Hub struct {
 	register   chan *Player
 	unregister chan *Player
 	broadcast  chan PlayerLoc
+	Info       chan interface{}
 	allData    map[string]Loc
 	Stamp      int64
 }
@@ -25,6 +26,7 @@ func createHub() *Hub {
 		make(chan *Player),
 		make(chan *Player),
 		make(chan PlayerLoc),
+		make(chan interface{}),
 		make(map[string]Loc),
 		0,
 	}
@@ -56,14 +58,25 @@ func (h *Hub) run() {
 			h.allData[playerLoc.Id] = Loc{h.Stamp, playerLoc.CommandNum, playerLoc.X, playerLoc.Y}
 			readyToSend = true
 			//add player data to allData
+		case Info := <-h.Info:
+			for player := range h.Players {
+				select {
+				case player.Send <- Info:
+				default:
+					close(player.Send)
+					delete(h.allData, h.Players[player])
+					delete(h.Players, player)
+				}
+			}
 		case <-ticker.C:
 			h.Stamp += 1
 			if readyToSend == true {
 				readyToSend = false
+				message := &Message{"COR", h.allData}
 				for player := range h.Players {
 					//send to player channel
 					select {
-					case player.Send <- h.allData:
+					case player.Send <- message:
 					default:
 						close(player.Send)
 						delete(h.allData, h.Players[player])

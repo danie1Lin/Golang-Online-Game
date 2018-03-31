@@ -35,26 +35,29 @@ func (p *Player) Recieve() {
 				helper.MapToStruct(message.Data, command)
 				fmt.Print(message, "  ")
 				fmt.Println(command)
-			}
-			if command.Up {
+				if command.Up {
+					playerXY.Y -= 5
+				}
+				if command.Left {
+					playerXY.X -= 5
+				}
+				if command.Down {
+					playerXY.Y += 5
+				}
+				if command.Right {
+					playerXY.X += 5
+				}
 
-				playerXY.Y -= 5
+				playerXY.CommandNum = command.CommandNum
+				playerLoc := PlayerLoc{
+					Id:  p.hub.Players[p],
+					Loc: playerXY,
+				}
+				p.hub.broadcast <- playerLoc
+			case "INFO":
+				p.hub.Info <- message
 			}
-			if command.Left {
-				playerXY.X -= 5
-			}
-			if command.Down {
-				playerXY.Y += 5
-			}
-			if command.Right {
-				playerXY.X += 5
-			}
-			playerXY.CommandNum = command.CommandNum
-			playerLoc := PlayerLoc{
-				Id:  p.hub.Players[p],
-				Loc: playerXY,
-			}
-			p.hub.broadcast <- playerLoc
+
 		}
 	}
 }
@@ -63,7 +66,7 @@ func (p *Player) Trans() {
 	for {
 		select {
 		case allData := <-p.Send:
-			err := p.conn.WriteJSON(&Message{"COR", allData})
+			err := p.conn.WriteJSON(allData)
 			if err != nil {
 				log.Println(err)
 				return
@@ -128,7 +131,7 @@ func main() {
 	})
 	fs := http.FileServer(http.Dir("static/"))
 	http.Handle("/", fs)
-	if err := http.ListenAndServe(":1234", nil); err != nil {
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal("ListenAndServe:", err)
 	}
 }

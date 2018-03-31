@@ -6,58 +6,75 @@ var movement = {
     Right: false 
 };
 
-function motionManager(ctx,ID){
+function motionManager(ctx){
     this.stamp = 0;
     this.commandNum = 0;
-    this.playerInfo = {};
+    this.playerInfo = new Map();
+    this.playerPos = {};
     this.ctx = ctx;
-    this.data = [];
-    this.ID = ID;
-    console.log('Login! ID:',ID)
+    this.serverData = [];
+    this.id = null;
     this.input = function(data){
-     if (data.Type == "COR") {
-            if (Id != null){
-                playerXY = data.Data[Id];
-                Enemy = data.Data;
-                interpolation(myPrePoint,[playerXY.X,playerXY.Y], 5, myPoints)
+        this.serverData.push(data)
+        switch (data.Type){
+        case  "COR": 
+            if (this.id != null){
+                playerXY = data.Data[this.id];
+                this.stamp = data.Data["Stamp"]
+                interpolation(myPrePoint,[playerXY.X,playerXY.Y], 5, this.playerInfo.get(this.id).points)
                 myPrePoint = [playerXY.X,playerXY.Y]
             }
             else {
                 console.log("No ID")
             }
+            break;
+        case "ID" :
+            this.id = data.Data;
+            console.log('Login! ID:',this.id);
+            $("#status-bar").html("Your id is "+String(this.id));
+            this.playerInfo.set(this.id,{
+                points : [[0,0]],
+                shape : "square",
+                color : "rgb(200,0,0)",
+                state : "alive",
+                name : String(this.id)
+            });
+            //TODO : Transmit info back
+            message = {Type:'INFO',Data:{id:this.id,Info:this.playerInfo.get(this.id)}};
+            sock.send(JSON.stringify(message));
+            break;
+        case "INFO":
+            this.playerInfo.set(data.Data.id,data.Data.Info);
+            break;
+        default:
+            console.log("unKown infoType:",data.Type)
         }
-        else if (data.Type == "ID"){
-            Id = data.Data;
-            player = new motionManager(ctx,Id)
-        }
-    }
-    this.interpolation = function(){
-   interpolation(); 
     }
     this.renderPlayer = function(){
-     var p = [0,0];
-    if (point.length > 1) {
-        p = point.pop();
-    }
-    else if(point.length == 1){
-        p = point[0];
-    }
-    drawRect(p[0],p[1]);
-    if (Enemy != null){
-        for( id in Enemy){
-            if (id != Id){
-                drawRect(Enemy[id].X,Enemy[id].Y)
-            }
+        for (let [id,info] of this.playerInfo){
+        let p = [];
+        if (info.points.length > 1) {
+            p = info.points.pop();
         }
-    }   
+        else if(info.points.length == 1){
+            p = info.points[0];
+        }   
+        drawRect(this.ctx, p[0], p[1], info.color, info.name);
+        }
     }
+    this.predict = function(){
+    
+    }
+    this.resolve = function(){
+    
+    }   
 }
 
 var player = null;
 var myPoints = new Array();
 var sock = null;
 var myPrePoint = [0,0];
-var wsuri = "ws://127.0.0.1:1234/ws";
+var wsuri = "ws://35.185.75.79:8080/ws";
 var playerName = "";
 var Enemy = null;
 var playerXY = {
@@ -79,28 +96,21 @@ function draw(){
     ctx.lineTo(100,25);
     ctx.fill();
 }
-function drawRect(x,y,color="rgb(200,0,0)",name){
-	var canvas = document.getElementById('game');
-    var ctx = canvas.getContext('2d');
+function drawRect(ctx, x, y, color="rgb(200,0,0)", name){
     ctx.fillStyle = color;
     ctx.fillRect (x-5, y-5, 10, 10);
+    ctx.fillStyle = "rgb(0,0,0)";
     ctx.fillText(name,x,y);
 }
 
-function init(){
-	window.requestAnimationFrame(loop);
-    var canvas = document.getElementById('game');
-	var ctx = canvas.getContext('2d');
-}
 
 function loop(){
     var canvas = document.getElementById('game');
 	var ctx = canvas.getContext('2d');
 	ctx.clearRect(0, 0, 800, 600); // clear canvas
 	ctx.save();
-
+    player.renderPlayer();
 	ctx.restore();
- 
 	window.requestAnimationFrame(loop);
 }
 
@@ -128,6 +138,7 @@ document.addEventListener('keydown', function(e){
         movement.CommandNum += 1;
         message = {Type:'M',Data:movement};
         sock.send(JSON.stringify(message));
+        player.predict();
     }
 });
 
@@ -153,6 +164,7 @@ window.onload = function() {
     var canvas = document.getElementById('game');
 	var ctx = canvas.getContext('2d');
 	console.log("onload");
+    player = new motionManager(ctx);
 	sock = new WebSocket(wsuri);
 	sock.onopen = function() {
 		console.log("connected to " + wsuri);
@@ -168,14 +180,16 @@ window.onload = function() {
     init();
 };
 
-
+function init(){
+	window.requestAnimationFrame(loop);
+}
 function send() {
 	var msg = document.getElementById('message').value;
 	sock.send(msg);
 };
 
 function interpolation(pre, next, interval, points) {
-    distance = [next[0]-pre[0],next[1]-pre[1]];
+    distance = [next[0]- pre[0],next[1]- pre[1]];
     for(i=1;i<=interval;i++){
         points.unshift([pre[0] + i* distance[0]/interval, pre[1] + i * distance[1]/interval]);
     }

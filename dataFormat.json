@@ -1,0 +1,13 @@
+{
+    dataType:
+    {
+        playerPosition:{
+            code:"COR",
+            format:null,
+        },
+        playerId:{
+            code:"ID",
+            format:null,
+        }
+    }
+}
