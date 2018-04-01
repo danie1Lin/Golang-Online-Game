@@ -55,6 +55,16 @@ func (p *Player) Recieve() {
 				}
 				p.hub.broadcast <- playerLoc
 			case "INFO":
+				info, ok := message.Data.(map[string]interface{})
+				if ok {
+					for k, v := range info {
+						p.hub.allInfo[k] = v
+					}
+					fmt.Println("[allInfo]", p.hub.allInfo)
+				} else {
+					fmt.Println(message.Data)
+				}
+				message.Data = p.hub.allInfo
 				p.hub.Info <- message
 			}
 

@@ -16,6 +16,7 @@ type Hub struct {
 	unregister chan *Player
 	broadcast  chan PlayerLoc
 	Info       chan interface{}
+	allInfo    map[string]interface{}
 	allData    map[string]Loc
 	Stamp      int64
 }
@@ -27,6 +28,7 @@ func createHub() *Hub {
 		make(chan *Player),
 		make(chan PlayerLoc),
 		make(chan interface{}),
+		make(map[string]interface{}),
 		make(map[string]Loc),
 		0,
 	}

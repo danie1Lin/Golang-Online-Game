@@ -10,7 +10,7 @@ function motionManager(ctx){
     this.stamp = 0;
     this.commandNum = 0;
     this.playerInfo = new Map();
-    this.playerPos = {};
+    this.playerPos = new Map();
     this.ctx = ctx;
     this.serverData = [];
     this.id = null;
@@ -19,10 +19,16 @@ function motionManager(ctx){
         switch (data.Type){
         case  "COR": 
             if (this.id != null){
-                playerXY = data.Data[this.id];
-                this.stamp = data.Data["Stamp"]
-                interpolation(myPrePoint,[playerXY.X,playerXY.Y], 5, this.playerInfo.get(this.id).points)
-                myPrePoint = [playerXY.X,playerXY.Y]
+                for ([id,v] of this.playerInfo){
+                    playerXY = data.Data[id];
+                    this.stamp = data.Data["Stamp"]
+                    if(this.playerPos.get(id)  ==  undefined && playerXY != undefined){
+                        this.playerPos.set(id,[[playerXY.X,playerXY.Y]]);
+                    }
+                    else if(this.playerPos.get(id)!= undefined && playerXY!=undefined){
+                        interpolation(this.playerPos.get(id)[0],[playerXY.X,playerXY.Y], 5, this.playerPos.get(id));
+                    }
+                }
             }
             else {
                 console.log("No ID")
@@ -33,33 +39,35 @@ function motionManager(ctx){
             console.log('Login! ID:',this.id);
             $("#status-bar").html("Your id is "+String(this.id));
             this.playerInfo.set(this.id,{
-                points : [[0,0]],
                 shape : "square",
                 color : "rgb(200,0,0)",
                 state : "alive",
                 name : String(this.id)
             });
             //TODO : Transmit info back
-            message = {Type:'INFO',Data:{id:this.id,Info:this.playerInfo.get(this.id)}};
+            message = {Type:'INFO',Data:{}};
+            message.Data[this.id] = this.playerInfo.get(this.id);
             sock.send(JSON.stringify(message));
             break;
         case "INFO":
-            this.playerInfo.set(data.Data.id,data.Data.Info);
+            Object.keys(data.Data).forEach(key => {
+            this.playerInfo.set(key, data.Data[key]);
+            });
             break;
         default:
             console.log("unKown infoType:",data.Type)
         }
     }
     this.renderPlayer = function(){
-        for (let [id,info] of this.playerInfo){
+        for (let [id,points] of this.playerPos){
         let p = [];
-        if (info.points.length > 1) {
-            p = info.points.pop();
+        if (points.length > 1) {
+            p = points.pop();
         }
-        else if(info.points.length == 1){
-            p = info.points[0];
+        else if(points.length == 1){
+            p = points[0];
         }   
-        drawRect(this.ctx, p[0], p[1], info.color, info.name);
+        drawRect(this.ctx, p[0], p[1], this.playerInfo.get(id).color, this.playerInfo.get(id).name);
         }
     }
     this.predict = function(){
